@@ -1,0 +1,746 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ========================================================= */
+/* THEMES & DYNAMIC ACCENT SYSTEM                            */
+/* ========================================================= */
+:root {
+  --app-bg: #f8fafc;
+  --app-text: #0f172a;
+  --app-text-muted: #64748b;
+  --app-card-bg: rgba(255, 255, 255, 0.85);
+  --app-card-border: rgba(226, 232, 240, 0.8);
+
+  /* Default Accent: Vermelho */
+  --app-accent: #dc2626;
+  --app-accent-hover: #b91c1c;
+  --app-accent-text: #ffffff;
+  --app-accent-tint: rgba(239, 68, 68, 0.12);
+  --app-accent-border: rgba(239, 68, 68, 0.35);
+  --app-accent-glow: rgba(239, 68, 68, 0.25);
+}
+
+/* 1. BRANCO PURO (100% White Background, 100% Black Text) */
+html.branco {
+  color-scheme: light;
+  background-color: #ffffff !important;
+}
+
+html.branco body {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+html.branco .glass-panel {
+  background: #ffffff !important;
+  border: 1px solid #e4e4e7 !important;
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+html.branco .glass-sidebar {
+  background: #fafafa !important;
+  border-right: 1px solid #e4e4e7 !important;
+}
+
+html.branco .glass-nav {
+  background: #ffffff !important;
+  border-bottom: 1px solid #e4e4e7 !important;
+}
+
+html.branco h1, html.branco h2, html.branco h3, html.branco h4, html.branco strong {
+  color: #000000 !important;
+}
+
+/* 2. MEGA PRETO (100% Black Background, 100% White Text) */
+html.megapreto {
+  color-scheme: dark;
+  background-color: #000000 !important;
+}
+
+html.megapreto body {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+html.megapreto .glass-panel {
+  background: #09090b !important;
+  border: 1px solid #27272a !important;
+  box-shadow: 0 4px 25px -2px rgba(0, 0, 0, 0.8) !important;
+}
+
+html.megapreto .glass-sidebar {
+  background: #000000 !important;
+  border-right: 1px solid #27272a !important;
+}
+
+html.megapreto .glass-nav {
+  background: #050505 !important;
+  border-bottom: 1px solid #27272a !important;
+}
+
+html.megapreto .legal-parchment-sheet {
+  background-color: #070708 !important;
+  border: 1px solid #27272a !important;
+}
+
+html.megapreto .notebook-ruled-page {
+  background-color: #070708 !important;
+}
+
+html.megapreto h1, html.megapreto h2, html.megapreto h3, html.megapreto h4, html.megapreto strong {
+  color: #ffffff !important;
+}
+
+/* 3. SLATE (Velvet Dark Navy) */
+html.slate {
+  color-scheme: dark;
+  background-color: #090d16 !important;
+}
+
+html.slate body {
+  background-color: #090d16 !important;
+  color: #f8fafc !important;
+}
+
+/* ========================================================= */
+/* ACCENT COLORS                                             */
+/* ========================================================= */
+
+/* VERMELHO */
+html[data-accent="vermelho"] {
+  --app-accent: #dc2626;
+  --app-accent-hover: #b91c1c;
+  --app-accent-text: #ffffff;
+  --app-accent-tint: rgba(239, 68, 68, 0.15);
+  --app-accent-border: rgba(239, 68, 68, 0.35);
+  --app-accent-glow: rgba(239, 68, 68, 0.25);
+}
+
+/* BRANCO */
+html[data-accent="branco"] {
+  --app-accent: #ffffff;
+  --app-accent-hover: #f4f4f5;
+  --app-accent-text: #000000;
+  --app-accent-tint: rgba(255, 255, 255, 0.18);
+  --app-accent-border: rgba(255, 255, 255, 0.4);
+  --app-accent-glow: rgba(255, 255, 255, 0.25);
+}
+html.branco[data-accent="branco"] {
+  --app-accent: #ffffff;
+  --app-accent-hover: #f4f4f5;
+  --app-accent-text: #000000;
+  --app-accent-tint: rgba(0, 0, 0, 0.05);
+  --app-accent-border: rgba(0, 0, 0, 0.2);
+  --app-accent-glow: rgba(0, 0, 0, 0.1);
+}
+
+/* PRETO */
+html[data-accent="preto"] {
+  --app-accent: #09090b;
+  --app-accent-hover: #18181b;
+  --app-accent-text: #ffffff;
+  --app-accent-tint: rgba(255, 255, 255, 0.1);
+  --app-accent-border: rgba(255, 255, 255, 0.25);
+  --app-accent-glow: rgba(0, 0, 0, 0.4);
+}
+html.megapreto[data-accent="preto"] {
+  --app-accent: #27272a;
+  --app-accent-hover: #3f3f46;
+  --app-accent-text: #ffffff;
+  --app-accent-tint: rgba(255, 255, 255, 0.1);
+  --app-accent-border: rgba(255, 255, 255, 0.25);
+  --app-accent-glow: rgba(255, 255, 255, 0.1);
+}
+
+/* INDIGO */
+html[data-accent="indigo"] {
+  --app-accent: #4f46e5;
+  --app-accent-hover: #4338ca;
+  --app-accent-text: #ffffff;
+  --app-accent-tint: rgba(99, 102, 241, 0.15);
+  --app-accent-border: rgba(99, 102, 241, 0.35);
+  --app-accent-glow: rgba(99, 102, 241, 0.25);
+}
+
+/* DOURADO */
+html[data-accent="dourado"] {
+  --app-accent: #d97706;
+  --app-accent-hover: #b45309;
+  --app-accent-text: #ffffff;
+  --app-accent-tint: rgba(245, 158, 11, 0.15);
+  --app-accent-border: rgba(245, 158, 11, 0.35);
+  --app-accent-glow: rgba(245, 158, 11, 0.25);
+}
+
+/* DYNAMIC ACCENT UTILITY CLASSES */
+.bg-theme-accent {
+  background-color: var(--app-accent) !important;
+  color: var(--app-accent-text) !important;
+}
+.hover\:bg-theme-accent-hover:hover {
+  background-color: var(--app-accent-hover) !important;
+}
+.text-theme-accent {
+  color: var(--app-accent) !important;
+}
+.border-theme-accent {
+  border-color: var(--app-accent-border) !important;
+}
+.bg-theme-accent-tint {
+  background-color: var(--app-accent-tint) !important;
+}
+.ring-theme-accent {
+  --tw-ring-color: var(--app-accent) !important;
+}
+.shadow-theme-accent {
+  box-shadow: 0 4px 14px 0 var(--app-accent-glow) !important;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Glassmorphism helpers */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+.dark .glass-panel {
+  background: rgba(15, 23, 42, 0.68);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.35);
+}
+
+.glass-sidebar {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.dark .glass-sidebar {
+  background: rgba(10, 14, 26, 0.82);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-nav {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.dark .glass-nav {
+  background: rgba(10, 14, 26, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Bookshelf 3D Styles (Authentic Mahogany & Warm Gold Edge) */
+.shelf-plank {
+  height: 22px;
+  background: linear-gradient(180deg, #422517 0%, #29160d 50%, #150b06 100%);
+  border-top: 2px solid rgba(245, 158, 11, 0.55);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.95);
+  box-shadow: 0 18px 26px -4px rgba(0, 0, 0, 0.8), 0 8px 12px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  border-radius: 2px 2px 4px 4px;
+}
+
+.dark .shelf-plank {
+  background: linear-gradient(180deg, #381e11 0%, #22120a 50%, #120905 100%);
+  border-top: 2px solid rgba(245, 158, 11, 0.45);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.95);
+  box-shadow: 0 22px 28px -4px rgba(0, 0, 0, 0.9), 0 10px 14px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+}
+
+.shelf-shadow {
+  height: 24px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0) 70%);
+}
+
+/* Book Spine Gold Ribs */
+.spine-rib {
+  height: 3px;
+  background: linear-gradient(90deg, rgba(217, 119, 6, 0.2) 0%, rgba(251, 191, 36, 0.85) 50%, rgba(217, 119, 6, 0.2) 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+/* Notebook Ruled Paper for horizontal reading */
+.notebook-ruled-page {
+  background-color: #faf8f5;
+  background-image: 
+    linear-gradient(90deg, transparent 48px, #ef4444 48px, #ef4444 50px, transparent 50px),
+    linear-gradient(#e2e8f0 1px, transparent 1px);
+  background-size: 100% 100%, 100% 28px;
+  line-height: 28px;
+}
+
+.dark .notebook-ruled-page {
+  background-color: #0d131f;
+  background-image: 
+    linear-gradient(90deg, transparent 48px, #f43f5e 48px, #f43f5e 50px, transparent 50px),
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 28px;
+  line-height: 28px;
+}
+
+/* Hardcover Book Texture & Embellishments */
+.hardcover-book {
+  position: relative;
+  border-radius: 4px 14px 14px 4px;
+  box-shadow: 
+    -4px 0 10px rgba(0, 0, 0, 0.6),
+    8px 16px 36px rgba(0, 0, 0, 0.8),
+    inset 18px 0 20px -8px rgba(0, 0, 0, 0.9),
+    inset -4px 0 8px rgba(255, 255, 255, 0.1),
+    6px 0 0 #b45309,
+    8px 0 2px rgba(0, 0, 0, 0.7);
+  background-size: cover;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Left Book Hinge & Crease */
+.hardcover-book::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 20px;
+  background: linear-gradient(
+    90deg, 
+    rgba(0,0,0,0.7) 0%, 
+    rgba(255,255,255,0.18) 45%, 
+    rgba(0,0,0,0.85) 55%, 
+    rgba(0,0,0,0.2) 100%
+  );
+  border-right: 1px solid rgba(0, 0, 0, 0.7);
+  box-shadow: 1px 0 1px rgba(255, 255, 255, 0.12);
+  border-radius: 4px 0 0 4px;
+  pointer-events: none;
+  z-index: 25;
+}
+
+/* Realistic Leather Specular Sheen */
+.hardcover-book::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 50% 25%, 
+    rgba(255, 255, 255, 0.12) 0%, 
+    rgba(255, 255, 255, 0.03) 40%, 
+    rgba(0, 0, 0, 0.4) 100%
+  );
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Gold Hot-Stamping Foil Effect */
+.gold-foil-title {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef08a 25%, #f59e0b 50%, #d97706 75%, #fef08a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.7);
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.9));
+}
+
+.silver-foil-title {
+  background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 25%, #cbd5e1 50%, #94a3b8 75%, #ffffff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.9));
+}
+
+.gold-frame-border {
+  border: 1.5px solid rgba(251, 191, 36, 0.6);
+  box-shadow: 
+    inset 0 0 0 2px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 3px rgba(251, 191, 36, 0.35);
+}
+
+/* Classical Ornate Corner SVG Bracket helper */
+.gold-corner-filigree {
+  width: 22px;
+  height: 22px;
+  position: absolute;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* ========================================================= */
+/* LUXURY LEGAL WORKSTATION & NOTEBOOK STYLING              */
+/* ========================================================= */
+.legal-parchment-sheet {
+  background-color: #fdfbf7;
+  box-shadow: 
+    0 20px 45px -10px rgba(0, 0, 0, 0.08), 
+    0 0 0 1px rgba(0, 0, 0, 0.04), 
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.dark .legal-parchment-sheet {
+  background-color: #0b1120;
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.6), 
+    0 0 0 1px rgba(255, 255, 255, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Legal Highlighters */
+.hl-amarelo {
+  background-color: rgba(254, 240, 138, 0.75);
+  color: #713f12;
+  padding: 2px 4px;
+  border-radius: 3px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.dark .hl-amarelo {
+  background-color: rgba(234, 179, 8, 0.35);
+  color: #fef08a;
+}
+
+.hl-verde {
+  background-color: rgba(187, 247, 208, 0.75);
+  color: #14532d;
+  padding: 2px 4px;
+  border-radius: 3px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.dark .hl-verde {
+  background-color: rgba(34, 197, 94, 0.35);
+  color: #86efac;
+}
+
+.hl-roxo {
+  background-color: rgba(233, 213, 255, 0.75);
+  color: #581c87;
+  padding: 2px 4px;
+  border-radius: 3px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.dark .hl-roxo {
+  background-color: rgba(168, 85, 247, 0.35);
+  color: #d8b4fe;
+}
+
+.hl-rosa {
+  background-color: rgba(254, 205, 211, 0.75);
+  color: #881337;
+  padding: 2px 4px;
+  border-radius: 3px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.dark .hl-rosa {
+  background-color: rgba(244, 63, 94, 0.35);
+  color: #fecdd3;
+}
+
+/* Print Styling for Legal Notes */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+  .legal-parchment-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    background-image: none !important;
+    padding: 0 !important;
+  }
+}
+
+/* ========================================================= */
+/* REAL LAW BOOK STYLING & 3D PAGE FLIP ANIMATIONS           */
+/* ========================================================= */
+@keyframes pageTurnForward {
+  0% {
+    transform: perspective(1400px) rotateY(0deg);
+    opacity: 1;
+  }
+  45% {
+    transform: perspective(1400px) rotateY(-22deg) scale(0.985);
+    opacity: 0.85;
+    box-shadow: -20px 10px 30px rgba(0, 0, 0, 0.4);
+  }
+  100% {
+    transform: perspective(1400px) rotateY(0deg) scale(1);
+    opacity: 1;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  }
+}
+
+@keyframes pageTurnBackward {
+  0% {
+    transform: perspective(1400px) rotateY(0deg);
+    opacity: 1;
+  }
+  45% {
+    transform: perspective(1400px) rotateY(22deg) scale(0.985);
+    opacity: 0.85;
+    box-shadow: 20px 10px 30px rgba(0, 0, 0, 0.4);
+  }
+  100% {
+    transform: perspective(1400px) rotateY(0deg) scale(1);
+    opacity: 1;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.animate-page-turn-forward {
+  transform-origin: left center;
+  animation: pageTurnForward 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.animate-page-turn-backward {
+  transform-origin: right center;
+  animation: pageTurnBackward 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Authentic Open Book Case & Page Texture */
+.real-book-case {
+  position: relative;
+  border-radius: 12px;
+  background: #141110;
+  padding: 6px;
+  box-shadow: 
+    0 30px 70px -15px rgba(0, 0, 0, 0.95),
+    0 0 0 2px rgba(217, 119, 6, 0.35),
+    inset 0 0 20px rgba(0, 0, 0, 0.9);
+}
+
+.real-book-page {
+  background-color: #faf7f0;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.9) 0%, rgba(246, 240, 228, 0.95) 100%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.03) 0%, transparent 8%, transparent 92%, rgba(0, 0, 0, 0.03) 100%);
+  color: #1a1a1a;
+  box-shadow: 
+    inset 0 0 25px rgba(0, 0, 0, 0.03);
+}
+
+.dark .real-book-page {
+  background-color: #0c0d11;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(24, 26, 33, 0.85) 0%, rgba(12, 13, 17, 0.95) 100%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.1) 0%, transparent 8%, transparent 92%, rgba(0, 0, 0, 0.1) 100%);
+  color: #e5e7eb;
+  box-shadow: 
+    inset 0 0 25px rgba(0, 0, 0, 0.4);
+}
+
+/* Strict Real Book Page Content Constraints (Never spills outside paper) */
+.real-book-page,
+.book-content-wrapper {
+  max-width: 100% !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
+.real-book-page * {
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+
+.book-content-wrapper {
+  overflow: visible !important;
+}
+
+.book-content-wrapper p,
+.book-content-wrapper div,
+.book-content-wrapper h1,
+.book-content-wrapper h2,
+.book-content-wrapper h3,
+.book-content-wrapper h4,
+.book-content-wrapper ul,
+.book-content-wrapper ol,
+.book-content-wrapper li,
+.book-content-wrapper blockquote {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
+.real-book-page table {
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin: 12px 0;
+  display: table;
+  overflow-x: auto;
+}
+
+.real-book-page pre,
+.real-book-page code {
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
+.real-book-page blockquote {
+  max-width: 100% !important;
+  margin-left: 0.5rem;
+  margin-right: 0.5rem;
+}
+
+/* ========================================================= */
+/* PRINT STYLES FOR STUDY NOTEBOOK (CLEAN FLOWING DOCUMENT)  */
+/* ========================================================= */
+@media print {
+  /* Hide all app chrome, sidebars, headers, and UI elements */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Make only the document sheet and its children visible */
+  .printable-notebook-sheet,
+  .printable-notebook-sheet * {
+    visibility: visible;
+  }
+
+  /* Position printable sheet at top-left of page and let it flow continuously */
+  .printable-notebook-sheet {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 20mm 15mm !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+  }
+
+  .printable-notebook-content {
+    min-height: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+    line-height: 1.6 !important;
+  }
+
+  .printable-notebook-sheet h1,
+  .printable-notebook-sheet h2,
+  .printable-notebook-sheet h3,
+  .printable-notebook-sheet h4 {
+    color: #000000 !important;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  .printable-notebook-sheet h1 {
+    font-size: 18pt !important;
+    margin-bottom: 8pt !important;
+  }
+
+  .printable-notebook-sheet h2 {
+    font-size: 14pt !important;
+    margin-top: 14pt !important;
+    margin-bottom: 6pt !important;
+  }
+
+  .printable-notebook-sheet h3 {
+    font-size: 12pt !important;
+    margin-top: 10pt !important;
+  }
+
+  .printable-notebook-sheet p,
+  .printable-notebook-sheet li {
+    color: #111111 !important;
+    font-size: 11pt !important;
+  }
+
+  .printable-notebook-sheet blockquote,
+  .printable-notebook-sheet [style*="border-left"] {
+    border-left: 3pt solid #1e293b !important;
+    background: #f8fafc !important;
+    color: #000000 !important;
+    padding: 6pt 12pt !important;
+    margin: 10pt 0 !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .printable-notebook-sheet strong,
+  .printable-notebook-sheet b {
+    color: #000000 !important;
+    font-weight: 700 !important;
+  }
+
+  .printable-notebook-sheet mark,
+  .printable-notebook-sheet [style*="background-color"],
+  .printable-notebook-sheet [style*="background"] {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  @page {
+    margin: 15mm;
+    size: A4 portrait;
+  }
+}
+
+
+
