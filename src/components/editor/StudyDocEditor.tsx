@@ -103,6 +103,10 @@ export const StudyDocEditor: React.FC = () => {
     subjects,
     theme,
     getSubjectDisplayName,
+    isVaultConnected,
+    vaultName,
+    isVaultSyncing,
+    syncNowToVault,
   } = useApp();
 
   // Navigation and filtering
@@ -2368,6 +2372,22 @@ export const StudyDocEditor: React.FC = () => {
                 />
                 <span>{isSaving ? 'Salvando...' : 'Salvo'}</span>
               </div>
+
+              {isVaultConnected && (
+                <button
+                  type="button"
+                  onClick={syncNowToVault}
+                  title={`Sincronizado no cofre Obsidian "${vaultName}". Clique para sincronizar agora.`}
+                  className="hidden md:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/25 hover:bg-purple-500/20 transition-all cursor-pointer"
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      isVaultSyncing ? 'bg-amber-400 animate-ping' : 'bg-purple-500'
+                    }`}
+                  />
+                  <span>{isVaultSyncing ? 'Obsidian...' : 'Obsidian Sync'}</span>
+                </button>
+              )}
             </div>
           </div>
 

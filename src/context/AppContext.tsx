@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import {
   StudentProfile,
   StudyDocument,
@@ -25,6 +25,19 @@ import {
   initialQuestions,
   initialSessions,
 } from '../data/mockData';
+import {
+  isFileSystemAccessSupported,
+  getSavedDirectoryHandle,
+  saveDirectoryHandle,
+  removeSavedDirectoryHandle,
+  writeDocumentToVault,
+  deleteDocumentFromVault,
+  writeScheduleToVault,
+  writeLibraryToVault,
+  writeQuestionsToVault,
+  readDocumentsFromVault,
+  syncAllToVault,
+} from '../services/obsidianVaultService';
 
 export interface ToastMessage {
   id: string;
@@ -36,6 +49,16 @@ interface AppContextType {
   // Navigation
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
+
+  // Obsidian Vault 2-Way Sync
+  isVaultConnected: boolean;
+  vaultName: string | null;
+  isVaultSyncing: boolean;
+  lastVaultSync: string | null;
+  connectObsidianVault: () => Promise<boolean>;
+  disconnectObsidianVault: () => Promise<void>;
+  syncNowToVault: () => Promise<void>;
+  pullFromVault: () => Promise<void>;
 
   // Student Profile
   profile: StudentProfile;
@@ -141,6 +164,7 @@ const STORAGE_KEYS = {
   SUBJECTS_LIST: 'lexstudy_subjects_list_v5',
   AUTH_SESSION: 'lexstudy_auth_session_v2',
   AUTH_PASSWORD: 'lexstudy_auth_password_v2',
+  VAULT_SYNC: 'lexstudy_last_vault_sync_v1',
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -323,7 +347,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
   const [timerSubject, setTimerSubject] = useState<LawSubject>('Ética Profissional (OAB)');
 
-const initialCustomEvents: CalendarCustomEvent[] = [];
+  // Obsidian Vault 2-Way Sync States
+  const [isVaultConnected, setIsVaultConnected] = useState<boolean>(false);
+  const [vaultName, setVaultName] = useState<string | null>(null);
+  const [isVaultSyncing, setIsVaultSyncing] = useState<boolean>(false);
+  const [lastVaultSync, setLastVaultSync] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.VAULT_SYNC) || null;
+    } catch {
+      return null;
+    }
+  });
+  const vaultHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
+
+  const initialCustomEvents: CalendarCustomEvent[] = [];
 
   // Theme, Accent & Sidebar States
   const [theme, setTheme] = useState<ThemeMode>(() => {
@@ -576,6 +613,13 @@ const initialCustomEvents: CalendarCustomEvent[] = [];
     setDocuments((prev) => [newDoc, ...prev]);
     setCurrentDocId(newDoc.id);
     setActiveTab('editor');
+
+    if (vaultHandleRef.current && isVaultConnected) {
+      writeDocumentToVault(vaultHandleRef.current, newDoc).catch((e) =>
+        console.warn('Erro ao salvar novo doc no cofre:', e)
+      );
+    }
+
     showToast(`Documento "${newDoc.title}" criado com sucesso!`);
     return newDoc;
   };
@@ -612,6 +656,12 @@ const initialCustomEvents: CalendarCustomEvent[] = [];
             !targetDoc.title.toLowerCase().includes(s.topic.toLowerCase())
         )
       );
+
+      if (vaultHandleRef.current && isVaultConnected) {
+        deleteDocumentFromVault(vaultHandleRef.current, targetDoc.title, targetDoc.subject).catch(
+          (e) => console.warn('Erro ao remover nota do cofre Obsidian:', e)
+        );
+      }
     }
 
     setCurrentDocId((prevId) => {
@@ -855,6 +905,257 @@ const initialCustomEvents: CalendarCustomEvent[] = [];
     showToast('Sessão encerrada com sucesso. Acesso bloqueado.', 'info');
   };
 
+  // ============================================================================
+  // OBSIDIAN VAULT 2-WAY SYNCHRONIZATION IMPLEMENTATION
+  // ============================================================================
+
+  // 1. Attempt to restore saved folder handle on mount
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const handle = await getSavedDirectoryHandle();
+        if (handle && isMounted) {
+          vaultHandleRef.current = handle;
+          setVaultName(handle.name);
+          const perm = await (handle as any).queryPermission?.({ mode: 'readwrite' });
+          if (perm === 'granted') {
+            setIsVaultConnected(true);
+          }
+        }
+      } catch (e) {
+        console.warn('Erro ao restaurar conexão do Obsidian:', e);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // 2. Connect Obsidian Vault (File System Access API)
+  const connectObsidianVault = async (): Promise<boolean> => {
+    if (!isFileSystemAccessSupported()) {
+      showToast(
+        'Seu navegador não suporta a File System API nativa. Utilize o Chrome, Edge, Brave ou Opera no desktop.',
+        'error'
+      );
+      return false;
+    }
+
+    try {
+      setIsVaultSyncing(true);
+      let handle = vaultHandleRef.current;
+
+      if (!handle) {
+        handle = await (window as any).showDirectoryPicker({
+          id: 'lexstudy-obsidian-vault',
+          mode: 'readwrite',
+        });
+      } else {
+        const perm = await (handle as any).requestPermission?.({ mode: 'readwrite' });
+        if (perm !== 'granted') {
+          handle = await (window as any).showDirectoryPicker({
+            id: 'lexstudy-obsidian-vault',
+            mode: 'readwrite',
+          });
+        }
+      }
+
+      if (!handle) return false;
+
+      await saveDirectoryHandle(handle);
+      vaultHandleRef.current = handle;
+      setVaultName(handle.name);
+      setIsVaultConnected(true);
+
+      // Perform initial full sync
+      const syncResult = await syncAllToVault(handle, {
+        documents,
+        schedule,
+        library,
+        questions,
+      });
+
+      const now = new Date();
+      const timeStr = `${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+      setLastVaultSync(timeStr);
+      localStorage.setItem(STORAGE_KEYS.VAULT_SYNC, timeStr);
+
+      if (syncResult.success) {
+        showToast(
+          `Cofre "${handle.name}" conectado! ${syncResult.notesCount} caderno(s) sincronizados.`,
+          'success'
+        );
+      } else {
+        showToast(`Cofre conectado com aviso: ${syncResult.error}`, 'info');
+      }
+
+      return true;
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        showToast('Seleção de pasta do Obsidian cancelada.', 'info');
+      } else {
+        console.error('Falha ao conectar cofre do Obsidian:', err);
+        showToast('Erro ao conectar ao Obsidian: ' + (err.message || 'Permissão negada'), 'error');
+      }
+      return false;
+    } finally {
+      setIsVaultSyncing(false);
+    }
+  };
+
+  // 3. Disconnect Vault
+  const disconnectObsidianVault = async (): Promise<void> => {
+    await removeSavedDirectoryHandle();
+    vaultHandleRef.current = null;
+    setIsVaultConnected(false);
+    setVaultName(null);
+    showToast('Cofre do Obsidian desconectado da aplicação.', 'info');
+  };
+
+  // 4. Force Push to Vault
+  const syncNowToVault = async (): Promise<void> => {
+    if (!vaultHandleRef.current) {
+      const ok = await connectObsidianVault();
+      if (!ok) return;
+    }
+
+    try {
+      setIsVaultSyncing(true);
+      const handle = vaultHandleRef.current!;
+      const perm = await (handle as any).requestPermission?.({ mode: 'readwrite' });
+      if (perm !== 'granted') {
+        showToast('Permissão de escrita na pasta não autorizada pelo navegador.', 'error');
+        setIsVaultConnected(false);
+        return;
+      }
+
+      const res = await syncAllToVault(handle, {
+        documents,
+        schedule,
+        library,
+        questions,
+      });
+
+      const now = new Date();
+      const timeStr = `${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+      setLastVaultSync(timeStr);
+      localStorage.setItem(STORAGE_KEYS.VAULT_SYNC, timeStr);
+
+      if (res.success) {
+        showToast(`Cofre do Obsidian 100% atualizado! (${res.notesCount} cadernos)`, 'success');
+      } else {
+        showToast(`Erro ao sincronizar com Obsidian: ${res.error}`, 'error');
+      }
+    } catch (err: any) {
+      console.error('Erro na sincronização manual:', err);
+      showToast('Erro ao sincronizar: ' + (err.message || 'Falha inesperada'), 'error');
+    } finally {
+      setIsVaultSyncing(false);
+    }
+  };
+
+  // 5. Pull Changes from Obsidian Vault back into LexStudy
+  const pullFromVault = async (): Promise<void> => {
+    if (!vaultHandleRef.current || !isVaultConnected) return;
+
+    try {
+      setIsVaultSyncing(true);
+      const handle = vaultHandleRef.current;
+      const perm = await (handle as any).queryPermission?.({ mode: 'readwrite' });
+      if (perm !== 'granted') return;
+
+      const vaultDocs = await readDocumentsFromVault(handle);
+      if (vaultDocs.length > 0) {
+        setDocuments((prevDocs) => {
+          let updatedCount = 0;
+          let addedCount = 0;
+          const merged = [...prevDocs];
+
+          vaultDocs.forEach((vDoc) => {
+            const existingIdx = merged.findIndex(
+              (d) =>
+                d.title.toLowerCase().trim() === vDoc.title.toLowerCase().trim() &&
+                d.subject === vDoc.subject
+            );
+            if (existingIdx !== -1) {
+              if (merged[existingIdx].content !== vDoc.content) {
+                merged[existingIdx] = {
+                  ...merged[existingIdx],
+                  content: vDoc.content,
+                  wordCount: vDoc.wordCount,
+                  lastModified: vDoc.lastModified,
+                  tags: Array.from(new Set([...merged[existingIdx].tags, ...vDoc.tags])),
+                };
+                updatedCount++;
+              }
+            } else {
+              merged.push(vDoc);
+              addedCount++;
+            }
+          });
+
+          if (updatedCount > 0 || addedCount > 0) {
+            showToast(
+              `Obsidian: ${addedCount > 0 ? `+${addedCount} novo(s) caderno(s)` : ''} ${updatedCount > 0 ? `${updatedCount} nota(s) sincronizada(s)` : ''}`,
+              'info'
+            );
+          }
+          return merged;
+        });
+
+        const now = new Date();
+        const timeStr = `${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+        setLastVaultSync(timeStr);
+        localStorage.setItem(STORAGE_KEYS.VAULT_SYNC, timeStr);
+      }
+    } catch (err) {
+      console.warn('Erro ao puxar dados do Obsidian:', err);
+    } finally {
+      setIsVaultSyncing(false);
+    }
+  };
+
+  // 6. Auto-detect modifications made inside Obsidian when user focuses window
+  useEffect(() => {
+    const handleFocus = () => {
+      if (isVaultConnected && vaultHandleRef.current) {
+        pullFromVault();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [isVaultConnected]);
+
+  // 7. Debounced auto-save to Obsidian when documents change in LexStudy
+  useEffect(() => {
+    if (!isVaultConnected || !vaultHandleRef.current) return;
+    const timer = setTimeout(() => {
+      if (vaultHandleRef.current && currentDocId) {
+        const currentDoc = documents.find((d) => d.id === currentDocId);
+        if (currentDoc) {
+          writeDocumentToVault(vaultHandleRef.current, currentDoc).catch((e) =>
+            console.warn('Erro auto-save Obsidian:', e)
+          );
+        }
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [documents, currentDocId, isVaultConnected]);
+
+  // 8. Auto-save schedule to Obsidian when schedule changes
+  useEffect(() => {
+    if (!isVaultConnected || !vaultHandleRef.current) return;
+    const timer = setTimeout(() => {
+      if (vaultHandleRef.current) {
+        writeScheduleToVault(vaultHandleRef.current, schedule).catch((e) =>
+          console.warn('Erro auto-save cronograma Obsidian:', e)
+        );
+      }
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [schedule, isVaultConnected]);
+
   const resetToDemoData = () => {
     setProfile({ ...initialProfile, totalStudyHours: 0 });
     setDocuments([]);
@@ -878,6 +1179,14 @@ const initialCustomEvents: CalendarCustomEvent[] = [];
       value={{
         activeTab,
         setActiveTab,
+        isVaultConnected,
+        vaultName,
+        isVaultSyncing,
+        lastVaultSync,
+        connectObsidianVault,
+        disconnectObsidianVault,
+        syncNowToVault,
+        pullFromVault,
         profile,
         updateProfile,
         documents,

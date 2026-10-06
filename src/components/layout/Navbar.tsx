@@ -11,6 +11,8 @@ import {
   Pause,
   RotateCcw,
   ChevronDown,
+  FolderSync,
+  RefreshCw,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -30,6 +32,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileSidebar, onNewDocume
     resetTimer,
     theme,
     toggleTheme,
+    isVaultConnected,
+    vaultName,
+    isVaultSyncing,
+    connectObsidianVault,
+    syncNowToVault,
   } = useApp();
 
   const [showTimerMenu, setShowTimerMenu] = useState(false);
@@ -149,6 +156,33 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileSidebar, onNewDocume
             </div>
           )}
         </div>
+
+        {/* Obsidian Vault Sync Indicator / Quick Button */}
+        {isVaultConnected ? (
+          <button
+            type="button"
+            onClick={syncNowToVault}
+            disabled={isVaultSyncing}
+            title={`Cofre Obsidian: "${vaultName || 'Conectado'}". Clique para sincronizar agora.`}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/30 hover:bg-purple-500/20 transition-all cursor-pointer shadow-2xs active:scale-95"
+          >
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${isVaultSyncing ? 'animate-spin text-purple-400' : 'text-purple-500'}`}
+            />
+            <span className="hidden sm:inline font-bold">Obsidian:</span>
+            <span className="truncate max-w-[90px]">{isVaultSyncing ? 'Sincronizando...' : (vaultName || 'Ativo')}</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={connectObsidianVault}
+            title="Conectar pasta local do Obsidian (Sincronização Bidirecional)"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:text-purple-500 dark:hover:text-purple-400 border border-slate-200/80 dark:border-white/10 hover:border-purple-500/30 transition-all cursor-pointer shadow-2xs active:scale-95"
+          >
+            <FolderSync className="w-3.5 h-3.5 text-purple-500" />
+            <span>Conectar Obsidian</span>
+          </button>
+        )}
 
         {/* Theme Toggle Button (Branco <-> Mega Preto) */}
         <button

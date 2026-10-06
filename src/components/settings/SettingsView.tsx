@@ -48,6 +48,9 @@ import {
   BookMarked,
   Eye,
   Lock,
+  FolderSync,
+  RefreshCw,
+  Unlink,
 } from 'lucide-react';
 
 export type SettingsTab = 'nomes' | 'aparencia' | 'materias' | 'metas' | 'dados';
@@ -216,6 +219,14 @@ export const SettingsView: React.FC = () => {
     resetSubjectNames,
     clearAllSessions,
     logout,
+    isVaultConnected,
+    vaultName,
+    isVaultSyncing,
+    lastVaultSync,
+    connectObsidianVault,
+    disconnectObsidianVault,
+    syncNowToVault,
+    pullFromVault,
   } = useApp();
 
   // Active Category Switcher State
@@ -1594,43 +1605,114 @@ export const SettingsView: React.FC = () => {
             </div>
           </div>
 
-          {/* Obsidian Vault Transfer Program */}
-          <div className="p-6 sm:p-7 rounded-2xl border border-indigo-500/30 dark:border-indigo-500/40 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="space-y-2 max-w-2xl">
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
-                  <Sparkles className="w-4 h-4" />
+          {/* Obsidian Vault Live 2-Way Sync & Transfer Card */}
+          <div className="p-6 sm:p-7 rounded-2xl border-2 border-purple-500/30 dark:border-purple-500/40 bg-gradient-to-br from-purple-500/10 via-indigo-500/5 to-transparent space-y-5">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400">
+                  <FolderSync className="w-5 h-5" />
                 </div>
-                <h3 className="font-bold text-slate-900 dark:text-white text-base">
-                  Programa de Transferência: Cofre Completo para o Obsidian
-                </h3>
-                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-                  Cofre Markdown .ZIP
-                </span>
-              </div>
-              <p className="text-xs text-slate-600 dark:text-zinc-300 leading-relaxed">
-                Empacota 100% da sua base de dados diretamente no formato nativo do <strong>Obsidian</strong>: converte cadernos em notas <strong>Markdown (.md)</strong> com metadados <strong>YAML Frontmatter</strong>, links bidirecionais <code className="text-indigo-400 font-mono">[[...]]</code>, tópicos de cronograma com checklists, flashcards para o plugin <em>Spaced Repetition</em> e arquivos prontos de configuração <code className="text-indigo-400 font-mono">.obsidian/</code>.
-              </p>
-              <div className="flex items-center gap-4 text-[11px] text-slate-500 dark:text-zinc-400 font-medium pt-1 flex-wrap">
-                <span className="flex items-center gap-1 font-semibold text-slate-700 dark:text-zinc-200">📁 {documents.length} cadernos formatados</span>
-                <span>•</span>
-                <span className="flex items-center gap-1 font-semibold text-slate-700 dark:text-zinc-200">📅 {schedule.length} tópicos com checklists</span>
-                <span>•</span>
-                <span className="flex items-center gap-1 font-semibold text-slate-700 dark:text-zinc-200">🎯 {questions.length} flashcards de questões</span>
-                <span>•</span>
-                <span className="flex items-center gap-1 font-semibold text-slate-700 dark:text-zinc-200">📖 {library.length} obras cadastradas</span>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                      Cofre Local do Obsidian (Sincronização Bidirecional)
+                    </h3>
+                    <span
+                      className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${
+                        isVaultConnected
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                          : 'bg-slate-500/20 text-slate-400 border-slate-500/30'
+                      }`}
+                    >
+                      {isVaultConnected ? `🟢 Conectado: ${vaultName}` : '⚪ Desconectado'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-zinc-300 mt-1 leading-relaxed max-w-2xl">
+                    Interliga seus estudos diretamente à pasta do Obsidian no seu computador ou Google Drive (<code className="text-purple-400 font-mono">G:\Meu Drive\Lex\LexStudy</code>). Edite no Obsidian ou aqui no LexStudy — os cadernos, cronograma e flashcards sincronizam em tempo real nos dois sentidos.
+                  </p>
+                </div>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={handleExportObsidian}
-              disabled={isExportingObsidian}
-              className="flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:brightness-110 text-white rounded-xl text-xs font-extrabold transition-all shadow-lg shadow-indigo-600/25 cursor-pointer active:scale-95 shrink-0 disabled:opacity-50"
-            >
-              <Download className="w-4 h-4" />
-              <span>{isExportingObsidian ? 'Gerando Cofre...' : 'Exportar para o Obsidian (.ZIP)'}</span>
-            </button>
+            {/* Status Info Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-xl bg-slate-900/40 border border-white/5 text-xs text-slate-300">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">Pasta Vinculada</span>
+                <span className="font-semibold text-slate-200 truncate block">
+                  {vaultName ? `📁 ${vaultName}` : 'Nenhuma pasta selecionada'}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">Última Sincronização</span>
+                <span className="font-semibold text-purple-300 block">
+                  {lastVaultSync || 'Ainda não sincronizado'}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">Sincronização Automática</span>
+                <span className="font-semibold text-emerald-400 block">
+                  {isVaultConnected ? '⚡ Ativa ao salvar & ao focar janela' : 'Inativa'}
+                </span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3 flex-wrap pt-2 border-t border-purple-500/20">
+              {isVaultConnected ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={syncNowToVault}
+                    disabled={isVaultSyncing}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-purple-600/30 cursor-pointer active:scale-95 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${isVaultSyncing ? 'animate-spin' : ''}`} />
+                    <span>{isVaultSyncing ? 'Sincronizando...' : 'Sincronizar Tudo Agora'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={pullFromVault}
+                    disabled={isVaultSyncing}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                  >
+                    <Download className="w-4 h-4 text-purple-400" />
+                    <span>Puxar Alterações do Obsidian</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={disconnectObsidianVault}
+                    className="flex items-center gap-2 px-3.5 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-semibold transition-all cursor-pointer ml-auto"
+                  >
+                    <Unlink className="w-4 h-4" />
+                    <span>Desconectar Cofre</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={connectObsidianVault}
+                  disabled={isVaultSyncing}
+                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:brightness-110 text-white rounded-xl text-xs font-extrabold transition-all shadow-lg shadow-purple-600/25 cursor-pointer active:scale-95 disabled:opacity-50"
+                >
+                  <FolderSync className="w-4 h-4" />
+                  <span>Conectar Pasta do Obsidian (G:\Meu Drive\Lex\LexStudy)</span>
+                </button>
+              )}
+
+              {/* Manual ZIP Backup Download Option */}
+              <button
+                type="button"
+                onClick={handleExportObsidian}
+                disabled={isExportingObsidian}
+                className="flex items-center gap-2 px-4 py-2.5 bg-slate-900/60 hover:bg-slate-900 text-slate-400 hover:text-white border border-white/10 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+                title="Baixar cofre compactado (.zip) como backup estático"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>{isExportingObsidian ? 'Baixando...' : 'Baixar Backup .ZIP do Cofre'}</span>
+              </button>
+            </div>
           </div>
 
           {/* Danger Zone & Operations */}
