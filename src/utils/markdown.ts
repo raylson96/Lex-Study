@@ -26,6 +26,16 @@ export function convertMarkdownToHtml(md: string): string {
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i];
 
+    // Images: ![alt](url)
+    const imgMatch = line.trim().match(/^!\[(.*?)\]\((.+)\)$/);
+    if (imgMatch) {
+      if (inList) { processedLines.push('</ul>'); inList = false; }
+      if (inOrderedList) { processedLines.push('</ol>'); inOrderedList = false; }
+      if (inBlockquote) { processedLines.push('</blockquote>'); inBlockquote = false; }
+      processedLines.push(`<div class="my-4 flex justify-center"><img src="${imgMatch[2]}" alt="${imgMatch[1]}" class="max-w-full rounded-xl shadow-md border border-slate-200 dark:border-white/10" style="max-height: 600px; object-fit: contain;" /></div>`);
+      continue;
+    }
+
     // Horizontal Rule
     if (/^(---|___|\*\*\*)$/.test(line.trim())) {
       if (inList) { processedLines.push('</ul>'); inList = false; }

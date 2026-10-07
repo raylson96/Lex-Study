@@ -36,6 +36,9 @@ import {
   writeLibraryToVault,
   writeQuestionsToVault,
   readDocumentsFromVault,
+  readVaultData,
+  saveLargeData,
+  getLargeData,
   syncAllToVault,
 } from '../services/obsidianVaultService';
 
@@ -529,7 +532,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [profile]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(documents));
+    saveLargeData(STORAGE_KEYS.DOCUMENTS, documents);
+    try {
+      localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(documents));
+    } catch (e) {
+      console.warn('localStorage quota excedida para cadernos; preservado no IndexedDB:', e);
+    }
   }, [documents]);
 
   useEffect(() => {
@@ -537,7 +545,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [schedule]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(library));
+    saveLargeData(STORAGE_KEYS.LIBRARY, library);
+    try {
+      localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(library));
+    } catch (e) {
+      console.warn('localStorage quota excedida para biblioteca; preservado no IndexedDB:', e);
+    }
   }, [library]);
 
   useEffect(() => {
@@ -909,11 +922,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // OBSIDIAN VAULT 2-WAY SYNCHRONIZATION IMPLEMENTATION
   // ============================================================================
 
-  // 1. Attempt to restore saved folder handle on mount
+  // 1. Attempt to restore saved folder handle and large data on mount
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
+        // Load any large data from IndexedDB
+        const [savedDocs, savedLib] = await Promise.all([
+          getLargeData<StudyDocument[]>(STORAGE_KEYS.DOCUMENTS),
+          getLargeData<LibraryItem[]>(STORAGE_KEYS.LIBRARY),
+        ]);
+        if (savedDocs && Array.isArray(savedDocs) && savedDocs.length > 0 && isMounted) {
+          setDocuments(savedDocs);
+        }
+        if (savedLib && Array.isArray(savedLib) && savedLib.length > 0 && isMounted) {
+          setLibrary(savedLib);
+        }
+
         const handle = await getSavedDirectoryHandle();
         if (handle && isMounted) {
           vaultHandleRef.current = handle;
@@ -921,6 +946,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const perm = await (handle as any).queryPermission?.({ mode: 'readwrite' });
           if (perm === 'granted') {
             setIsVaultConnected(true);
+            // Auto pull on startup if permission is already granted
+            pullFromVault();
           }
         }
       } catch (e) {
@@ -1057,21 +1084,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // 5. Pull Changes from Obsidian Vault back into LexStudy
   const pullFromVault = async (): Promise<void> => {
-    if (!vaultHandleRef.current || !isVaultConnected) return;
+    if (!vaultHandleRef.current) return;
 
     try {
       setIsVaultSyncing(true);
       const handle = vaultHandleRef.current;
       const perm = await (handle as any).queryPermission?.({ mode: 'readwrite' });
-      if (perm !== 'granted') return;
+      if (perm !== 'granted') {
+        const reqPerm = await (handle as any).requestPermission?.({ mode: 'readwrite' });
+        if (reqPerm !== 'granted') return;
+      }
 
-      const vaultDocs = await readDocumentsFromVault(handle);
+      const { documents: vaultDocs, library: vaultLib } = await readVaultData(handle);
+
+      let docAdded = 0;
+      let docUpdated = 0;
+      let libAdded = 0;
+      let libUpdated = 0;
+
+      // 1. Merge Vault Documents into Documents
       if (vaultDocs.length > 0) {
         setDocuments((prevDocs) => {
-          let updatedCount = 0;
-          let addedCount = 0;
           const merged = [...prevDocs];
-
           vaultDocs.forEach((vDoc) => {
             const existingIdx = merged.findIndex(
               (d) =>
@@ -1087,30 +1121,70 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   lastModified: vDoc.lastModified,
                   tags: Array.from(new Set([...merged[existingIdx].tags, ...vDoc.tags])),
                 };
-                updatedCount++;
+                docUpdated++;
               }
             } else {
               merged.push(vDoc);
-              addedCount++;
+              docAdded++;
             }
           });
-
-          if (updatedCount > 0 || addedCount > 0) {
-            showToast(
-              `Obsidian: ${addedCount > 0 ? `+${addedCount} novo(s) caderno(s)` : ''} ${updatedCount > 0 ? `${updatedCount} nota(s) sincronizada(s)` : ''}`,
-              'info'
-            );
-          }
+          saveLargeData(STORAGE_KEYS.DOCUMENTS, merged);
           return merged;
         });
-
-        const now = new Date();
-        const timeStr = `${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-        setLastVaultSync(timeStr);
-        localStorage.setItem(STORAGE_KEYS.VAULT_SYNC, timeStr);
       }
-    } catch (err) {
+
+      // 2. Merge Vault Library Books into Library
+      if (vaultLib.length > 0) {
+        setLibrary((prevLib) => {
+          const merged = [...prevLib];
+          vaultLib.forEach((vItem) => {
+            const existingIdx = merged.findIndex(
+              (item) => item.title.toLowerCase().trim() === vItem.title.toLowerCase().trim()
+            );
+            if (existingIdx !== -1) {
+              if (
+                merged[existingIdx].markdownContent !== vItem.markdownContent ||
+                merged[existingIdx].summary !== vItem.summary
+              ) {
+                merged[existingIdx] = {
+                  ...merged[existingIdx],
+                  markdownContent: vItem.markdownContent,
+                  summary: vItem.summary,
+                  author: vItem.author,
+                  subject: vItem.subject,
+                  category: vItem.category,
+                  edition: vItem.edition,
+                };
+                libUpdated++;
+              }
+            } else {
+              merged.push(vItem);
+              libAdded++;
+            }
+          });
+          saveLargeData(STORAGE_KEYS.LIBRARY, merged);
+          return merged;
+        });
+      }
+
+      const now = new Date();
+      const timeStr = `${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+      setLastVaultSync(timeStr);
+      try {
+        localStorage.setItem(STORAGE_KEYS.VAULT_SYNC, timeStr);
+      } catch {}
+
+      if (docAdded > 0 || docUpdated > 0 || libAdded > 0 || libUpdated > 0) {
+        showToast(
+          `Obsidian sincronizado! ${libAdded > 0 ? `+${libAdded} obra(s) na Biblioteca. ` : ''}${docAdded > 0 ? `+${docAdded} caderno(s). ` : ''}${docUpdated > 0 || libUpdated > 0 ? 'Arquivos atualizados.' : ''}`,
+          'success'
+        );
+      } else {
+        showToast('Obsidian: Cadernos e biblioteca verificados (tudo atualizado).', 'info');
+      }
+    } catch (err: any) {
       console.warn('Erro ao puxar dados do Obsidian:', err);
+      showToast('Erro ao ler cofre do Obsidian: ' + (err.message || 'Falha ao acessar arquivos'), 'error');
     } finally {
       setIsVaultSyncing(false);
     }

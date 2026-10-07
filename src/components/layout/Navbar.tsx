@@ -37,6 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileSidebar, onNewDocume
     isVaultSyncing,
     connectObsidianVault,
     syncNowToVault,
+    pullFromVault,
   } = useApp();
 
   const [showTimerMenu, setShowTimerMenu] = useState(false);
@@ -161,9 +162,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileSidebar, onNewDocume
         {isVaultConnected ? (
           <button
             type="button"
-            onClick={syncNowToVault}
+            onClick={async () => {
+              await pullFromVault();
+              await syncNowToVault();
+            }}
             disabled={isVaultSyncing}
-            title={`Cofre Obsidian: "${vaultName || 'Conectado'}". Clique para sincronizar agora.`}
+            title={`Cofre Obsidian: "${vaultName || 'Conectado'}". Clique para sincronizar e puxar alterações agora.`}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/30 hover:bg-purple-500/20 transition-all cursor-pointer shadow-2xs active:scale-95"
           >
             <RefreshCw
